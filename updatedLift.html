@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css">
+    <script src="bootstrap/js/jquery.js"></script>
+    <script src="d3.js"></script>
+
+    <style>
+        #main-div{
+            width: 500px;
+            margin:auto;
+            position: relative;
+        }
+        .floor{
+            height: 300px;
+            border: 1px solid black;
+            text-align: center;
+            background-color: rgba(23, 23, 23, 0.45);
+        }
+        #lift{
+            width: 35%;
+            height: 200px;
+            position: absolute;
+            border: 1px solid black;
+            text-align: center;
+            background-color: #ccc
+        }
+        #lift #allButtons{
+            width: 70px;
+            float: right;
+            margin-top: 30px;
+        }
+        #lift .btns{
+            color: white;
+            background-color:  rgba(23, 23, 23, 0.45);
+            width: 33px;
+        }
+        .arrow-up{
+            margin: 160px 116px 0px 0px;
+        }
+        .arrow-down{
+            margin: 0px 116px 0px 0px;
+        }
+        .red{
+            background-color: red;
+        }
+
+
+    </style>
+</head>
+<body>
+<div>
+    write floor #:
+    <input type="number" id="floorNo">
+</div>
+<div id="main-div">
+    <div id="lift">
+        <div id="allButtons">
+
+        </div>
+    </div>
+</div>
+
+<script>
+    var floorHeight = 300;
+    var floors = 1;
+    var liftHeight = 200;
+    var target ;
+    var currentTop = calculateFloorTop(8);
+    var step = 2;
+    var animating = false;
+    var stoppers = {
+        "1": function(){return currentTop >= target},
+        "-1": function(){return currentTop <= target}
+    };
+    var remover = null;
+    var stopper = null;
+    var bag1 = [];          // smaller
+    var bag2 = [];          // greater
+    var waitingBag = bag1;
+    var actionBag = bag2;
+    var timer;
+
+            //create floor
+    d3.select("#floorNo").on("keyup",function(){
+        var floor = this.value;
+        initSystem(floor);    //parseInt(a) is equal to +a
+        if(floor == "")return  initSystem(8);
+    });
+
+    initSystem(8);
+
+    function initSystem(floor) {
+        floors = floor;
+        currentTop = calculateFloorTop(floors);
+        lift.style.top = currentTop + "px";
+        var data = [];
+        for (var i = 1; i <= floors; i++) {
+            data.push({value: i, ui: (parseInt(floors) + 1) - i});
+        }
+
+                //for floor making
+        var currentNodes =  d3.select("#main-div").selectAll("div.floor");
+        var dataNodes = currentNodes.data(data);
+        var enteredNodes = dataNodes.enter().append("div").attr("class", "floor");
+            enteredNodes.append("div").attr("class","floorNo");
+            enteredNodes.append("div").attr("class","arrow-up").append("span").attr("class","glyphicon glyphicon-circle-arrow-up btn");
+            enteredNodes.append("div").attr("class","arrow-down").append("span").attr("class","glyphicon glyphicon-circle-arrow-down btn");
+        var allNodes = enteredNodes.merge(currentNodes);
+            allNodes.select("div.floorNo").text(function(obj){return "floor # " + obj.ui});
+            allNodes.select("div.arrow-up span").on("click",function(floorNo){ callLift(floorNo.value)});
+            allNodes.select("div.arrow-down span").on("click",function(floorNo){return callLift(floorNo.value)});
+        dataNodes.exit().remove();
+
+                //for buttons making
+        var currentButtons = d3.select("#allButtons").selectAll("button.btns");
+        var dataButtons = currentButtons.data(data);
+        var enteredButtons = dataButtons.enter().append("button").attr("class","btns");
+        var allButtons = enteredButtons.merge(currentButtons);
+        allButtons.text(function(obj){return obj.ui}).on("click",function(obj){return callLift(obj.value) })
+        dataButtons.exit().remove();
+
+//        function highlightBtns(){
+//            currentButtons.on("click",function(){}).attr("class","styling")
+//        }
+    }
+//    highlightBtns()
+//    function highlightBtns() {
+//        var allBtns = d3.select("#allButtons").selectAll("button.btns");
+//        allBtns.on("click", function () {
+//            if (currentTop !== target) {
+//                this.classList.add("red")
+//            }
+//            else {
+//                this.classList.remove("red")
+//            }
+//        })
+//    }
+    function calculateFloorTop(floor){
+        return floorHeight * floor - liftHeight;
+    }
+    function calculateFloorNumber(){
+        var floorNumber = (currentTop + liftHeight) / floorHeight;
+        return Math.sign(step) === 1 ? Math.ceil(floorNumber) : Math.floor(floorNumber);
+    }
+    function callLift(floorNumber){
+        var currentFloor = calculateFloorNumber();
+        var allFloors = bag1.concat(bag2);
+        if(allFloors.indexOf(floorNumber) !== -1) return;
+
+        if(floorNumber < currentFloor){
+            bag1.push(floorNumber);
+        }
+        else if(floorNumber > currentFloor ){
+            bag2.push(floorNumber);
+        }
+        else{
+            actionBag.push(floorNumber);
+        }
+        callLiftNext();
+    }
+    function callLiftNext(){
+        if(actionBag.length == 0 && waitingBag.length == 0){
+            return;
+        }
+        console.log("call lift running");
+        if(actionBag.length === 0) {
+            var temp = actionBag;
+            actionBag = waitingBag;
+            waitingBag = temp;
+        }
+        actionBag.sort();
+        //console.log("action bag: " +actionBag);
+        var sign = actionBag === bag1 ? -1 : +1;
+       // console.log("actionBag === bag1 " + actionBag === bag1);
+       // console.log("sign : " + sign);
+        //console.log("bag 1 :" + bag1);
+        //console.log("bag 2 :" + bag2);
+        step = Math.abs(step) * sign;
+        stopper = stoppers[sign];
+        if(sign === 1){
+            console.log("running positive direction");
+            remover = function(){
+                actionBag.shift();
+            };
+            moveTo(actionBag[0]);
+        }
+        else{
+            console.log("running negative direction");
+            remover = function(){
+                actionBag.pop();
+            };
+            moveTo(actionBag[actionBag.length-1]);
+        }
+    }
+    function moveTo(floor){
+        target =  calculateFloorTop(floor);
+        if(!target || currentTop == target) return stop();
+        animating || animateLift();
+        animating = true;
+    }
+    function animateLift(){
+        if(!stopper) return;
+        if(stopper()){
+            currentTop = target;
+            var checkBtn = d3.select("#allButtons").selectAll("button")
+            timer = setTimeout(function(){
+                timer = null;
+                stop();
+            }, 2000);
+        }
+        else {
+            currentTop += step;
+            requestAnimationFrame(animateLift);
+        }
+        lift.style.top = currentTop + "px";
+    }
+    function stop(){
+        if(timer){
+            return;
+        }
+        remover();
+        stopper = null;
+        remover = null;
+        animating = false;
+        timer = null;
+        console.log("animation has got false");
+        callLiftNext();
+    }
+
+</script>
+</body>
+</html>
