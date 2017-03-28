@@ -121,23 +121,8 @@
         var allButtons = enteredButtons.merge(currentButtons);
         allButtons.text(function(obj){return obj.ui}).on("click",function(obj){return callLift(obj.value) })
         dataButtons.exit().remove();
-
-//        function highlightBtns(){
-//            currentButtons.on("click",function(){}).attr("class","styling")
-//        }
     }
-//    highlightBtns()
-//    function highlightBtns() {
-//        var allBtns = d3.select("#allButtons").selectAll("button.btns");
-//        allBtns.on("click", function () {
-//            if (currentTop !== target) {
-//                this.classList.add("red")
-//            }
-//            else {
-//                this.classList.remove("red")
-//            }
-//        })
-//    }
+
     function calculateFloorTop(floor){
         return floorHeight * floor - liftHeight;
     }
@@ -172,12 +157,7 @@
             waitingBag = temp;
         }
         actionBag.sort();
-        //console.log("action bag: " +actionBag);
         var sign = actionBag === bag1 ? -1 : +1;
-       // console.log("actionBag === bag1 " + actionBag === bag1);
-       // console.log("sign : " + sign);
-        //console.log("bag 1 :" + bag1);
-        //console.log("bag 2 :" + bag2);
         step = Math.abs(step) * sign;
         stopper = stoppers[sign];
         if(sign === 1){
